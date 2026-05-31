@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: realtime-shop-generator
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shop}
+    username: ${SPRING_DATASOURCE_USERNAME:shop}
+    password: ${SPRING_DATASOURCE_PASSWORD:shop}
+    driver-class-name: org.postgresql.Driver
+
+generator:
+  initial-delay-ms: ${GENERATOR_INITIAL_DELAY_MS:3000}
+  fixed-rate-ms: ${GENERATOR_FIXED_RATE_MS:2000}
+
+logging:
+  level:
+    com.realtimeshop.generator: INFO
