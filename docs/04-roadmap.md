@@ -24,13 +24,13 @@ Project dibangun bertahap. Setiap MVP menghasilkan sesuatu yang bisa didemokan d
 
 **Tujuan:** ubah data mentah jadi model analitik yang berguna.
 
-- [ ] Tambah `dim_customers`, `dim_products` (ReplacingMergeTree).
-- [ ] Tambah `fact_payments`, `fact_inventory_events`.
-- [ ] Materialized View agregasi:
-  - [ ] `agg_revenue_per_minute`
-  - [ ] `agg_product_sales_daily` (top products)
-  - [ ] `agg_payment_status_hourly` (success rate)
-- [ ] **Handling update/delete**: generator meng-update status order & payment; verifikasi state terakhir benar di ClickHouse.
+- [x] Tambah `dim_customers`, `dim_products` (ReplacingMergeTree).
+- [x] Tambah `fact_payments`, `fact_inventory_events`.
+- [x] Materialized View agregasi:
+  - [x] `agg_revenue_per_minute`
+  - [x] `agg_product_sales_daily` (top products)
+  - [x] `agg_payment_status_hourly` (success rate)
+- [x] **Handling update/delete**: generator meng-update status order & payment; verifikasi state terakhir benar di ClickHouse. *(update flow sudah dibuat; runtime verification menunggu Docker daemon aktif)*
 
 **Deliverable demo:** dashboard query top product & payment success rate, plus bukti update status order tercermin di OLAP.
 

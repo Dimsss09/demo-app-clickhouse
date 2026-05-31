@@ -12,7 +12,7 @@
     "publication.name": "dbz_publication",
     "publication.autocreate.mode": "disabled",
     "slot.name": "dbz_slot",
-    "table.include.list": "public.customers,public.products,public.orders,public.order_items,public.payments",
+    "table.include.list": "public.customers,public.products,public.orders,public.order_items,public.payments,public.inventory_events",
     "decimal.handling.mode": "string",
     "time.precision.mode": "connect",
     "tombstones.on.delete": "false",

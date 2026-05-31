@@ -10,6 +10,11 @@ spring:
 generator:
   initial-delay-ms: ${GENERATOR_INITIAL_DELAY_MS:3000}
   fixed-rate-ms: ${GENERATOR_FIXED_RATE_MS:2000}
+  status-update-rate-ms: ${GENERATOR_STATUS_UPDATE_RATE_MS:5000}
+  restock-initial-delay-ms: ${GENERATOR_RESTOCK_INITIAL_DELAY_MS:10000}
+  restock-rate-ms: ${GENERATOR_RESTOCK_RATE_MS:30000}
+  delete-initial-delay-ms: ${GENERATOR_DELETE_INITIAL_DELAY_MS:20000}
+  delete-rate-ms: ${GENERATOR_DELETE_RATE_MS:30000}
 
 logging:
   level:
