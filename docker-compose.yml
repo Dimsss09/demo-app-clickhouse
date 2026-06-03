@@ -50,7 +50,11 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -66,6 +70,9 @@ services:
       CONFIG_STORAGE_TOPIC: shop_connect_configs
       OFFSET_STORAGE_TOPIC: shop_connect_offsets
       STATUS_STORAGE_TOPIC: shop_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
       KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
@@ -76,7 +83,8 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/connectors >/dev/null"]
+      test:
+        ["CMD-SHELL", "curl -fsS http://localhost:8083/connectors >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -99,7 +107,11 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client -u clickhouse --password clickhouse --query 'SELECT 1' >/dev/null"]
+      test:
+        [
+          "CMD-SHELL",
+          "clickhouse-client -u clickhouse --password clickhouse --query 'SELECT 1' >/dev/null",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -118,6 +130,24 @@ services:
       kafka:
         condition: service_healthy
       debezium:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: shop-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_DEFAULT_THEME: light
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      clickhouse:
         condition: service_healthy
 
   generator:
@@ -144,3 +174,4 @@ services:
 volumes:
   postgres-data:
   clickhouse-data:
+  grafana-data:
