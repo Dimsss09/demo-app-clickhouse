@@ -45,11 +45,20 @@ CREATE PUBLICATION dbz_publication FOR ALL TABLES;
     "topic.prefix": "shop",
     "plugin.name": "pgoutput",
     "publication.name": "dbz_publication",
+    "publication.autocreate.mode": "disabled",
     "slot.name": "dbz_slot",
-    "table.include.list": "public.customers,public.products,public.orders,public.order_items,public.payments,public.shipments,public.inventory_events",
-    "tombstones.on.delete": "false",
+    "table.include.list": "public.customers,public.products,public.orders,public.order_items,public.payments,public.inventory_events",
     "decimal.handling.mode": "string",
-    "time.precision.mode": "connect"
+    "time.precision.mode": "connect",
+    "tombstones.on.delete": "false",
+    "snapshot.mode": "initial",
+    "errors.tolerance": "all",
+    "errors.retry.timeout": "60000",
+    "errors.retry.delay.max.ms": "5000",
+    "errors.deadletterqueue.topic.name": "shop.dlq",
+    "errors.deadletterqueue.topic.replication.factor": "1",
+    "errors.deadletterqueue.context.headers.enable": "true",
+    "errors.log.enable": "true"
   }
 }
 ```
@@ -62,9 +71,10 @@ shop.public.products
 shop.public.orders
 shop.public.order_items
 shop.public.payments
-shop.public.shipments
 shop.public.inventory_events
 ```
+
+> Catatan: model konseptual masih menyebut `shipments`, tetapi connector MVP saat ini hanya mereplikasi tabel yang sudah punya alur OLAP/materialized view aktif.
 
 ---
 
@@ -89,6 +99,7 @@ Setiap pesan Kafka berisi `payload` dengan bentuk:
 ```
 
 Kolom kunci untuk OLAP:
+
 - `op` → menentukan insert/update/delete.
 - `source.lsn` atau `ts_ms` → dipakai sebagai `_version` untuk dedup di `ReplacingMergeTree`.
 
@@ -182,30 +193,35 @@ GROUP BY hour, status;
 
 ## 7. Penanganan update & delete (ringkas)
 
-| Event | OLTP | Penanganan di ClickHouse |
-|-------|------|--------------------------|
-| `c` insert | INSERT order | tulis baris baru ke fact, `_version` = lsn |
+| Event      | OLTP                | Penanganan di ClickHouse                                                                  |
+| ---------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `c` insert | INSERT order        | tulis baris baru ke fact, `_version` = lsn                                                |
 | `u` update | UPDATE status order | tulis baris baru dengan `_version` lebih tinggi → `ReplacingMergeTree` ambil yang terbaru |
-| `d` delete | DELETE order | tulis baris `is_deleted = 1` dengan `_version` tertinggi |
-| `r` read | snapshot awal | diperlakukan seperti insert |
+| `d` delete | DELETE order        | tulis baris `is_deleted = 1` dengan `_version` tertinggi                                  |
+| `r` read   | snapshot awal       | diperlakukan seperti insert                                                               |
 
 ---
 
 ## 8. Reliability & Observability
 
 ### Dead-letter topic
+
 Konfigurasi error handling di Kafka Connect:
 
 ```json
 {
   "errors.tolerance": "all",
+  "errors.retry.timeout": "60000",
+  "errors.retry.delay.max.ms": "5000",
   "errors.deadletterqueue.topic.name": "shop.dlq",
+  "errors.deadletterqueue.topic.replication.factor": "1",
   "errors.deadletterqueue.context.headers.enable": "true",
   "errors.log.enable": "true"
 }
 ```
 
 ### Memantau consumer lag
+
 ```sql
 -- ClickHouse: status consumer Kafka
 SELECT * FROM system.kafka_consumers;
@@ -214,6 +230,7 @@ SELECT * FROM system.kafka_consumers;
 Gunakan **Kafka UI** (http://localhost:8080) untuk memantau lag per consumer group dan inspeksi pesan.
 
 ### Memantau ingest ClickHouse
+
 ```sql
 SELECT table, sum(rows) AS rows, count() AS parts
 FROM system.parts

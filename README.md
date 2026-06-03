@@ -2,7 +2,7 @@
 
 **Real-Time E-Commerce Analytics Platform** — pipeline OLTP → OLAP berbasis Change Data Capture (CDC).
 
-Data transaksi dari aplikasi e-commerce (PostgreSQL) direplikasi secara *near real-time* ke ClickHouse menggunakan Debezium + Kafka, lalu diubah menjadi tabel analitik (fact, dimension, dan agregasi) untuk kebutuhan analitik berlatensi rendah: revenue, produk terlaris, payment success rate, pergerakan stok, dan order stream real-time.
+Data transaksi dari aplikasi e-commerce (PostgreSQL) direplikasi secara _near real-time_ ke ClickHouse menggunakan Debezium + Kafka, lalu diubah menjadi tabel analitik (fact, dimension, dan agregasi) untuk kebutuhan analitik berlatensi rendah: revenue, produk terlaris, payment success rate, pergerakan stok, dan order stream real-time.
 
 > Ringkasan CV (EN):
 > Built a real-time OLTP-to-OLAP analytics pipeline using Spring Boot, PostgreSQL logical replication, Debezium, Kafka, and ClickHouse. Implemented CDC-based synchronization from transactional tables into analytical fact tables with ClickHouse Kafka Engine and Materialized Views for low-latency sales, payment, and product analytics.
@@ -44,16 +44,16 @@ Spring Boot Data Generator / API
 
 ## Tech Stack
 
-| Layer | Teknologi |
-|-------|-----------|
-| OLTP / Source | PostgreSQL (logical replication) |
-| Data Generator | Spring Boot (Java) |
-| CDC | Debezium (Kafka Connect) |
-| Event Backbone | Apache Kafka |
-| OLAP / Warehouse | ClickHouse (Kafka Engine + Materialized Views) |
-| Orchestration | Docker Compose |
-| Observability | Kafka UI, ClickHouse system tables, dead-letter topic |
-| Visualisasi | Grafana / Metabase / Superset (opsional) |
+| Layer            | Teknologi                                             |
+| ---------------- | ----------------------------------------------------- |
+| OLTP / Source    | PostgreSQL (logical replication)                      |
+| Data Generator   | Spring Boot (Java)                                    |
+| CDC              | Debezium (Kafka Connect)                              |
+| Event Backbone   | Apache Kafka                                          |
+| OLAP / Warehouse | ClickHouse (Kafka Engine + Materialized Views)        |
+| Orchestration    | Docker Compose                                        |
+| Observability    | Kafka UI, ClickHouse system tables, dead-letter topic |
+| Visualisasi      | Grafana + ClickHouse datasource                       |
 
 ## Dokumentasi
 
@@ -64,11 +64,12 @@ Dokumentasi lengkap ada di folder [`docs/`](./docs):
 3. [CDC Pipeline](./docs/03-cdc-pipeline.md) — setup Debezium, Kafka, ClickHouse Kafka Engine, dan Materialized Views.
 4. [Roadmap (MVP)](./docs/04-roadmap.md) — pembagian scope MVP 1, 2, 3.
 5. [Analytics Queries](./docs/05-analytics-queries.md) — contoh query analitik untuk demo.
+6. [Reliability & Observability](./docs/06-reliability-observability.md) — Kafka UI, DLQ, monitoring lag, dan Grafana dashboard.
 
-## Quick Start MVP 1
+## Quick Start MVP 3 — Reliability & Observability
 
 ```powershell
-# 1. Jalankan infra dasar
+# 1. Jalankan seluruh stack observability + pipeline
 docker compose up -d
 
 # 2. Daftarkan / update Debezium connector
@@ -88,9 +89,57 @@ docker exec -it shop-clickhouse clickhouse-client `
   --query "SELECT * FROM agg_revenue_per_minute ORDER BY minute DESC LIMIT 10"
 ```
 
-Kafka UI tersedia di <http://localhost:8080>, Kafka Connect di <http://localhost:8083>, dan ClickHouse HTTP di <http://localhost:8123>.
+Endpoint demo:
 
-## Quick Start (target akhir)
+| Service            | URL / akses             | Keterangan                                                    |
+| ------------------ | ----------------------- | ------------------------------------------------------------- |
+| Kafka UI           | <http://localhost:8080> | Topic, messages, Kafka Connect, consumer lag.                 |
+| Kafka Connect REST | <http://localhost:8083> | Status connector/task Debezium.                               |
+| ClickHouse HTTP    | <http://localhost:8123> | Query HTTP ke database `analytics`.                           |
+| Grafana            | <http://localhost:3000> | Login `admin` / `admin`, dashboard **RealtimeShop Overview**. |
+
+## Demo Reliability & Observability
+
+### Cek status connector Debezium
+
+```powershell
+curl http://localhost:8083/connectors/shop-postgres-connector/status
+```
+
+### Cek dead-letter topic
+
+Connector sudah dikonfigurasi dengan `errors.tolerance=all` dan DLQ `shop.dlq`.
+
+```powershell
+docker exec -it shop-kafka kafka-console-consumer `
+  --bootstrap-server kafka:9092 `
+  --topic shop.dlq `
+  --from-beginning `
+  --max-messages 10
+```
+
+### Cek consumer lag / ingest ClickHouse
+
+```powershell
+docker exec -it shop-clickhouse clickhouse-client `
+  -u clickhouse --password clickhouse --database analytics `
+  --query "SELECT database, table, consumer_id, last_poll_time, num_messages_read, last_exception FROM system.kafka_consumers ORDER BY table"
+```
+
+```powershell
+docker exec -it shop-clickhouse clickhouse-client `
+  -u clickhouse --password clickhouse --database analytics `
+  --query "SELECT table, sum(rows) AS rows, count() AS parts FROM system.parts WHERE active AND database='analytics' GROUP BY table ORDER BY rows DESC"
+```
+
+### Buka dashboard Grafana
+
+1. Buka <http://localhost:3000>.
+2. Login `admin` / `admin`.
+3. Buka folder **RealtimeShop** → dashboard **RealtimeShop Overview**.
+4. Pastikan panel revenue, payment success rate, top products, dan live order stream berubah saat generator berjalan.
+
+## Quick Start alternatif via curl
 
 ```bash
 # 1. Jalankan seluruh stack
@@ -102,10 +151,11 @@ curl -X POST http://localhost:8083/connectors \
   -d @debezium/postgres-connector.json
 
 # 3. Jalankan data generator (Spring Boot)
-#    menghasilkan order, payment, dan perubahan stok terus-menerus
+docker compose --profile generator up -d --build generator
 
 # 4. Cek hasil analitik di ClickHouse
-docker exec -it clickhouse clickhouse-client \
+docker exec -it shop-clickhouse clickhouse-client \
+  -u clickhouse --password clickhouse --database analytics \
   --query "SELECT * FROM agg_revenue_per_minute ORDER BY minute DESC LIMIT 10"
 
 # 5. Buka dashboard / Kafka UI
@@ -113,8 +163,6 @@ docker exec -it clickhouse clickhouse-client \
 #    Grafana:     http://localhost:3000
 ```
 
-> Catatan: layanan di atas adalah target arsitektur akhir. Lihat [Roadmap](./docs/04-roadmap.md) untuk urutan pembangunannya secara bertahap.
-
 ## Status
 
-🚧 Project tahap awal — dokumentasi & desain. Implementasi mengikuti roadmap MVP.
+✅ MVP 1–3 implemented secara lokal: CDC pipeline, analytical modeling, reliability/observability, Kafka UI, DLQ, dan Grafana dashboard. Runtime verification tetap bergantung pada Docker daemon dan image pull lokal.

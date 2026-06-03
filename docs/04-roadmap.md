@@ -12,9 +12,9 @@ Project dibangun bertahap. Setiap MVP menghasilkan sesuatu yang bisa didemokan d
 - [x] Skema OLTP PostgreSQL (`customers`, `products`, `orders`, `order_items`, `payments`).
 - [x] Aktifkan logical replication + publication.
 - [x] Spring Boot generator sederhana: bikin order + payment terus-menerus (insert saja dulu).
-- [x] Debezium connector terdaftar, topic muncul di Kafka. *(config + helper registration sudah dibuat; runtime verification menunggu Docker daemon aktif)*
+- [x] Debezium connector terdaftar, topic muncul di Kafka. _(config + helper registration sudah dibuat; runtime verification menunggu Docker daemon aktif)_
 - [x] ClickHouse Kafka Engine table + Materialized View → `fact_orders`.
-- [x] Query revenue & order count real-time berjalan. *(query sudah tersedia; runtime verification menunggu Docker daemon aktif)*
+- [x] Query revenue & order count real-time berjalan. _(query sudah tersedia; runtime verification menunggu Docker daemon aktif)_
 
 **Deliverable demo:** `SELECT count() FROM fact_orders` naik seiring generator jalan.
 
@@ -30,7 +30,7 @@ Project dibangun bertahap. Setiap MVP menghasilkan sesuatu yang bisa didemokan d
   - [x] `agg_revenue_per_minute`
   - [x] `agg_product_sales_daily` (top products)
   - [x] `agg_payment_status_hourly` (success rate)
-- [x] **Handling update/delete**: generator meng-update status order & payment; verifikasi state terakhir benar di ClickHouse. *(update flow sudah dibuat; runtime verification menunggu Docker daemon aktif)*
+- [x] **Handling update/delete**: generator meng-update status order & payment; verifikasi state terakhir benar di ClickHouse. _(update flow sudah dibuat; runtime verification menunggu Docker daemon aktif)_
 
 **Deliverable demo:** dashboard query top product & payment success rate, plus bukti update status order tercermin di OLAP.
 
@@ -40,12 +40,12 @@ Project dibangun bertahap. Setiap MVP menghasilkan sesuatu yang bisa didemokan d
 
 **Tujuan:** bikin project terlihat production-minded.
 
-- [ ] Docker Compose lengkap + **Kafka UI**.
-- [ ] Dead-letter topic untuk event gagal.
-- [ ] Dokumentasi konfigurasi Debezium connector.
-- [ ] Monitoring lag sederhana (Kafka UI / system tables).
-- [ ] Dashboard: **Grafana** atau **Metabase** terhubung ke ClickHouse.
-- [ ] README lengkap dengan diagram arsitektur & contoh query demo.
+- [x] Docker Compose lengkap + **Kafka UI**.
+- [x] Dead-letter topic untuk event gagal.
+- [x] Dokumentasi konfigurasi Debezium connector.
+- [x] Monitoring lag sederhana (Kafka UI / system tables).
+- [x] Dashboard: **Grafana** atau **Metabase** terhubung ke ClickHouse.
+- [x] README lengkap dengan diagram arsitektur & contoh query demo.
 - [ ] (Opsional) GIF/screenshot demo real-time order stream.
 
 **Deliverable demo:** `docker compose up` → semuanya hidup, dashboard menampilkan metrik real-time, ada penanganan error.
@@ -65,10 +65,10 @@ Project dibangun bertahap. Setiap MVP menghasilkan sesuatu yang bisa didemokan d
 
 ## Estimasi urutan kerja
 
-| Fase | Fokus | Output utama |
-|------|-------|--------------|
-| 1 | Infra + insert flow | pipeline jalan end-to-end |
-| 2 | Model analitik + update/delete | fact/dim/agg + CDC penuh |
-| 3 | Observability + dashboard | demo siap CV |
+| Fase | Fokus                          | Output utama              |
+| ---- | ------------------------------ | ------------------------- |
+| 1    | Infra + insert flow            | pipeline jalan end-to-end |
+| 2    | Model analitik + update/delete | fact/dim/agg + CDC penuh  |
+| 3    | Observability + dashboard      | demo siap CV              |
 
 Mulai dari MVP 1. Jangan menambah komponen baru sebelum aliran data dasar terbukti jalan — ini menghindari debugging banyak hal sekaligus.
