@@ -4,9 +4,6 @@ RealtimeShop Analytics adalah demo **real-time e-commerce analytics platform** y
 
 Pipeline ini mensimulasikan aplikasi toko online: data order, payment, order item, product, customer, dan inventory event ditulis ke PostgreSQL oleh generator Spring Boot. Debezium membaca perubahan dari WAL PostgreSQL, menerbitkannya ke Kafka, lalu ClickHouse mengonsumsi event tersebut untuk membentuk tabel fact, dimension, aggregation, dan history. Grafana dipakai sebagai dashboard visual.
 
-> CV summary:
-> Built a real-time OLTP-to-OLAP analytics pipeline using Spring Boot, PostgreSQL logical replication, Debezium, Kafka, and ClickHouse. Implemented CDC-based synchronization into ClickHouse fact, dimension, aggregation, and history tables with Grafana dashboards for streaming analytics, funnel analysis, approximate distribution, pre-aggregation, and time-travel views.
-
 ## Architecture
 
 ![RealtimeShop Architecture](./docs/images/architecture.svg)
