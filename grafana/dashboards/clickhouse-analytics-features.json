@@ -1,0 +1,644 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "1. Streaming - Real-Time Multi-Window Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 15,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 0,
+          "queryType": "sql",
+          "rawSql": "SELECT minute AS time, sum(revenue) AS revenue, sum(order_count) AS orders FROM agg_revenue_per_minute WHERE minute >= now() - INTERVAL 1 HOUR GROUP BY minute ORDER BY minute",
+          "refId": "A"
+        }
+      ],
+      "title": "Streaming Revenue and Orders",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT window, orders, revenue FROM (SELECT '5 minutes' AS window, count() AS orders, sum(total_amount) AS revenue, 1 AS sort FROM fact_orders WHERE created_at >= now() - INTERVAL 5 MINUTE AND status IN ('paid','shipped','delivered') AND is_deleted = 0 UNION ALL SELECT '15 minutes', count(), sum(total_amount), 2 FROM fact_orders WHERE created_at >= now() - INTERVAL 15 MINUTE AND status IN ('paid','shipped','delivered') AND is_deleted = 0 UNION ALL SELECT '1 hour', count(), sum(total_amount), 3 FROM fact_orders WHERE created_at >= now() - INTERVAL 1 HOUR AND status IN ('paid','shipped','delivered') AND is_deleted = 0) ORDER BY sort",
+          "refId": "A"
+        }
+      ],
+      "title": "Multi-Window Metrics",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 4,
+      "panels": [],
+      "title": "2. Funnel - Order Conversion Flow",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 5,
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT status, count() AS orders FROM (SELECT order_id, argMax(status, _version) AS status, argMax(is_deleted, _version) AS is_deleted FROM fact_orders GROUP BY order_id) WHERE is_deleted = 0 GROUP BY status ORDER BY multiIf(status = 'pending', 1, status = 'paid', 2, status = 'shipped', 3, status = 'delivered', 4, status = 'cancelled', 5, 6)",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Order Funnel",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT hour, status, payment_count, total_amount FROM agg_payment_status_hourly ORDER BY hour DESC, status LIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "title": "Payment Status Funnel Support",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 7,
+      "panels": [],
+      "title": "3. Distribution - Approximate Cardinality with HyperLogLog",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 0,
+        "y": 19
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 0,
+          "queryType": "sql",
+          "rawSql": "SELECT toStartOfMinute(created_at) AS time, uniqHLL12(customer_id) AS approx_unique_customers, count() AS order_events FROM fact_orders WHERE created_at >= now() - INTERVAL 1 HOUR AND is_deleted = 0 GROUP BY time ORDER BY time",
+          "refId": "A"
+        }
+      ],
+      "title": "Approx Unique Customers Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 19
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT uniqExact(customer_id) AS exact_unique_customers, uniqHLL12(customer_id) AS hll_unique_customers, uniqCombined(customer_id) AS combined_unique_customers, count() AS total_order_events FROM fact_orders WHERE created_at >= now() - INTERVAL 1 HOUR AND is_deleted = 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Exact vs Approx Distribution",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 10,
+      "panels": [],
+      "title": "4. Pre-Aggregation - Fast Dashboard Reads",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT source, orders, revenue FROM (SELECT 'pre_aggregated_table' AS source, sum(order_count) AS orders, sum(revenue) AS revenue FROM agg_revenue_per_minute WHERE minute >= now() - INTERVAL 1 HOUR UNION ALL SELECT 'fact_table_scan', count() AS orders, sum(total_amount) AS revenue FROM fact_orders WHERE created_at >= now() - INTERVAL 1 HOUR AND status IN ('paid','shipped','delivered') AND is_deleted = 0)",
+          "refId": "A"
+        }
+      ],
+      "title": "Pre-Aggregated vs Fact Scan",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "id": 12,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT minute, order_count, revenue FROM agg_revenue_per_minute ORDER BY minute DESC LIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "title": "Pre-Aggregated Revenue Buckets",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 13,
+      "panels": [],
+      "title": "5. Time Travel - State As Of a Past Point",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT snapshot, status, count() AS orders FROM (SELECT 'current' AS snapshot, argMax(status, _version) AS status, argMax(is_deleted, _version) AS is_deleted FROM fact_orders GROUP BY order_id UNION ALL SELECT '5 minutes ago' AS snapshot, argMax(status, _version) AS status, argMax(is_deleted, _version) AS is_deleted FROM order_status_history WHERE event_time <= now() - INTERVAL 5 MINUTE GROUP BY order_id) WHERE is_deleted = 0 GROUP BY snapshot, status ORDER BY snapshot, status",
+          "refId": "A"
+        }
+      ],
+      "title": "Order State Now vs 5 Minutes Ago",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-analytics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 15,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-analytics"
+          },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT order_id, event_time, op, status, total_amount, is_deleted FROM order_status_history ORDER BY event_time DESC LIMIT 30",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Order History Events",
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 40,
+  "tags": [
+    "clickhouse",
+    "analytics",
+    "features"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "ClickHouse Analytics Features",
+  "uid": "clickhouse-analytics-features",
+  "version": 1,
+  "weekStart": ""
+}
